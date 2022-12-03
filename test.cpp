@@ -224,8 +224,13 @@ class SingleStageCore : public Core {
 
 		void step() {
 			/* Your implementation*/
-
-			halted = true;
+			//step 1 fetch ins:
+			// get instruction using read intruction from PC from IF from state
+			//step 2 execute instruction:
+			// helper: identify and execute the instuction given: 32bit instruction
+			//step 3 update state:
+			// update nop in next state by certain condition
+			halted = true;//stub
 			if (state.IF.nop)
 				halted = true;
 			
@@ -262,6 +267,9 @@ class FiveStageCore : public Core{
 
 		void step() {
 			/* Your implementation */
+			// helper 1: create a queue<intsurction> given parameter (int)
+			// 		example: getQueue(1) create a queue with one empty elment in it
+			//	helper 2: add a instruction to all 5 stages' queues
 			/* --------------------- WB stage --------------------- */
 			
 			
@@ -279,6 +287,7 @@ class FiveStageCore : public Core{
 			
 			
 			/* --------------------- IF stage --------------------- */
+			// conditional nop by cooldown int array for all register
 			
 			
 			halted = true;
