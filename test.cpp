@@ -3,7 +3,6 @@
 #include<vector>
 #include<bitset>
 #include<fstream>
-
 using namespace std;
 
 #define MemSize 1000 // memory size, in reality, the memory size should be 2^32, but for this lab, for the space resaon, we keep it as this large number, but the memory is still 32-bit addressable.
@@ -76,8 +75,7 @@ class InsMem
 			imem.open(ioDir + "/imem.txt");
 			if (imem.is_open())
 			{
-				while (getline(imem,line))
-				{      
+				while (getline(imem,line)) {      
 					IMem[i] = bitset<8>(line);
 					i++;
 				}                    
@@ -89,13 +87,7 @@ class InsMem
 		bitset<32> readInstr(bitset<32> ReadAddress) {    
 			// read instruction memory
 			// return bitset<32> val
-            string insmem;
-			insmem.append(IMem[ReadAddress.to_ulong()].to_string());
-			insmem.append(IMem[ReadAddress.to_ulong()+1].to_string());
-			insmem.append(IMem[ReadAddress.to_ulong()+2].to_string());
-			insmem.append(IMem[ReadAddress.to_ulong()+3].to_string());
-			Instruction = bitset<32>(insmem);
-			return Instruction;
+			return ReadAddress;
 		}     
       
     private:
