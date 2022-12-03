@@ -99,7 +99,7 @@ class InsMem
 		}     
       
     private:
-        vector<bitset<8> > IMem;     
+        vector<bitset<8>> IMem;     
 };
       
 class DataMem    
