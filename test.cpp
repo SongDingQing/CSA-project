@@ -85,9 +85,12 @@ class InsMem
 		}
 
 		bitset<32> readInstr(bitset<32> ReadAddress) {    
-			// read instruction memory
-			// return bitset<32> val
-			return ReadAddress;
+			string instruction;
+            instruction.append(DMem[Address.to_ulong()].to_string());
+            instruction.append(DMem[Address.to_ulong()+1].to_string());
+            instruction.append(DMem[Address.to_ulong()+2].to_string());
+            instruction.append(DMem[Address.to_ulong()+3].to_string());
+            return bitset<32>(instruction); 
 		}     
       
     private:
