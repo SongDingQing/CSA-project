@@ -3,7 +3,6 @@
 #include<vector>
 #include<bitset>
 #include<fstream>
-
 using namespace std;
 
 #define MemSize 1000 // memory size, in reality, the memory size should be 2^32, but for this lab, for the space resaon, we keep it as this large number, but the memory is still 32-bit addressable.
@@ -66,17 +65,17 @@ class InsMem
 {
 	public:
 		string id, ioDir;
+        bitset<32> Instruction;
         InsMem(string name, string ioDir) {       
 			id = name;
 			IMem.resize(MemSize);
             ifstream imem;
 			string line;
 			int i=0;
-			imem.open(ioDir + "\\imem.txt");
+			imem.open(ioDir + "/imem.txt");
 			if (imem.is_open())
 			{
-				while (getline(imem,line))
-				{      
+				while (getline(imem,line)) {      
 					IMem[i] = bitset<8>(line);
 					i++;
 				}                    
@@ -88,24 +87,25 @@ class InsMem
 		bitset<32> readInstr(bitset<32> ReadAddress) {    
 			// read instruction memory
 			// return bitset<32> val
-			return ReadAddress;//stub 
+			return ReadAddress;
 		}     
       
     private:
-        vector<bitset<8> > IMem;     
+        vector<bitset<8>> IMem;     
 };
       
 class DataMem    
 {
     public: 
 		string id, opFilePath, ioDir;
-        DataMem(string name, string ioDir) : id{name}, ioDir{ioDir} {
+        bitset<32> ReadData;
+        DataMem(string name, string ioDir) : id(name), ioDir(ioDir) {
             DMem.resize(MemSize);
-			opFilePath = ioDir + "\\" + name + "_DMEMResult.txt";
+			opFilePath = ioDir + "/" + name + "_DMEMResult.txt";
             ifstream dmem;
             string line;
             int i=0;
-            dmem.open(ioDir + "\\dmem.txt");
+            dmem.open(ioDir + "/dmem.txt");
             if (dmem.is_open())
             {
                 while (getline(dmem,line))
@@ -119,13 +119,21 @@ class DataMem
         }
 		
         bitset<32> readDataMem(bitset<32> Address) {	
-			// read data memory
-			// return bitset<32> val
-			return Address;//stub
+			string datamem;
+            datamem.append(DMem[Address.to_ulong()].to_string());
+            datamem.append(DMem[Address.to_ulong()+1].to_string());
+            datamem.append(DMem[Address.to_ulong()+2].to_string());
+            datamem.append(DMem[Address.to_ulong()+3].to_string());
+            ReadData = bitset<32>(datamem);
+            return ReadData;        
 		}
             
         void writeDataMem(bitset<32> Address, bitset<32> WriteData) {
 			// write into memory
+            DMem[Address.to_ulong()] = bitset<8>(WriteData.to_string().substr(0, 8));
+            DMem[Address.to_ulong() + 1] = bitset<8>(WriteData.to_string().substr(8, 8));
+            DMem[Address.to_ulong() + 2] = bitset<8>(WriteData.to_string().substr(16, 8));
+            DMem[Address.to_ulong() + 3] = bitset<8>(WriteData.to_string().substr(24, 8));
         }   
                      
         void outputDataMem() {
@@ -150,17 +158,22 @@ class RegisterFile
 {
     public:
 		string outputFile;
-     	RegisterFile(string ioDir): outputFile {ioDir + "RFResult.txt"} {
+        bitset<32> Reg_data;
+     	RegisterFile(string ioDir): outputFile(ioDir + "RFResult.txt") {
 			Registers.resize(32);  
-			Registers[0] = bitset<32> (0);  
+			Registers[0] = bitset<32> (0);
         }
 	
         bitset<32> readRF(bitset<5> Reg_addr) {   
             // Fill in
+            Reg_data = Registers[Reg_addr.to_ulong()];
+            return Reg_data;
         }
     
         void writeRF(bitset<5> Reg_addr, bitset<32> Wrt_reg_data) {
             // Fill in
+            Registers[Reg_addr.to_ulong()] = Wrt_reg_data;
+
         }
 		 
 		void outputRF(int cycle) {
@@ -195,7 +208,7 @@ class Core {
 		InsMem ext_imem;
 		DataMem ext_dmem;
 		
-		Core(string ioDir, InsMem &imem, DataMem &dmem): myRF(ioDir), ioDir{ioDir}, ext_imem {imem}, ext_dmem {dmem} {}
+		Core(string ioDir, InsMem &imem, DataMem &dmem): myRF(ioDir), ioDir(ioDir), ext_imem(imem), ext_dmem(dmem) {}
 
 		virtual void step() {}
 
@@ -204,7 +217,7 @@ class Core {
 
 class SingleStageCore : public Core {
 	public:
-		SingleStageCore(string ioDir, InsMem &imem, DataMem &dmem): Core(ioDir + "\\SS_", imem, dmem), opFilePath(ioDir + "\\StateResult_SS.txt") {}
+		SingleStageCore(string ioDir, InsMem &imem, DataMem &dmem): Core(ioDir + "/SS_", imem, dmem), opFilePath(ioDir + "/StateResult_SS.txt") {}
 
 		void step() {
 			/* Your implementation*/
@@ -242,7 +255,7 @@ class SingleStageCore : public Core {
 class FiveStageCore : public Core{
 	public:
 		
-		FiveStageCore(string ioDir, InsMem &imem, DataMem &dmem): Core(ioDir + "\\FS_", imem, dmem), opFilePath(ioDir + "\\StateResult_FS.txt") {}
+		FiveStageCore(string ioDir, InsMem &imem, DataMem &dmem): Core(ioDir + "/FS_", imem, dmem), opFilePath(ioDir + "/StateResult_FS.txt") {}
 
 		void step() {
 			/* Your implementation */
