@@ -1,6 +1,6 @@
 0:       LW R1, R0, #0       // Load Mem[R0+0] into R1 - Value 8
 4:  C1:  ADDI R2, R2, #4     // Increment R2 by 4
-8:       BNE R1, R2, B1      // If R1 != R2 branch to C1
+8:       BNE R1, R2, R1      // If R1 != R2 branch to C1
 12:      HALT                // Halt
 
 /* Binary

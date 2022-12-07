@@ -1,3 +1,3 @@
 State after executing cycle:	0
-IF.PC:	0
-IF.nop:	192
+IF.PC:	4
+IF.nop:	0
