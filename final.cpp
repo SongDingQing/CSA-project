@@ -474,9 +474,9 @@ class FiveStageCore : public Core{
 				if (opcode == "0000011") {// LW <<<<<<<<TODO
 					cout<<"\tfunction LW..." << endl;
 					nextState.EX.INS = "lw"; 
-					nextstate.EX.Imm = extend(Instruction.to_string().substr(0,12));
-                	nextstate.EX.Rs = bitset<5> (Instruction.to_string().substr(12,5));
-                	nextstate.EX.Wrt_reg_addr = bitset<5> (Instruction.to_string().substr(20,5));
+					nextState.EX.Imm = extend(Instruction.to_string().substr(0,12));
+                	nextState.EX.Rs = bitset<5> (Instruction.to_string().substr(12,5));
+                	nextState.EX.Wrt_reg_addr = bitset<5> (Instruction.to_string().substr(20,5));
 				} else if (opcode == "0100011") {// SW <<<<<<<<TODO
 					cout<<"\tfunction SW..." << endl;
 					nextState.EX.INS = "sw"; 
