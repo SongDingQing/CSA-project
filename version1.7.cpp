@@ -5,7 +5,7 @@
 #include<fstream>
 #include<queue>
 using namespace std;
-#define MemSize 1000 // memory size, in reality, the memory size should be 2^32, but for this lab, for the space resaon, we keep it as this large numberdr, but the memory is still 32-bit addressable.
+#define MemSize 1000 // memory size, in reality, the memory size should be 2^32, but for this lab, for the space resaon, we keep it as this large number, but the memory is still 32-bit addressable.
 struct IFStruct {
     bitset<32>  PC = 0;
     bool        nop = false;  
@@ -16,13 +16,13 @@ struct IDStruct {
     bool        nop = true;  
 };
 struct EXStruct {
-	bitset<32>  PC = 0;
     bitset<32>  Read_data1;// data storage for rs1
     bitset<32>  Read_data2;// data storage for rs2
     bitset<16>  Imm;
     bitset<5>   Rs;//rs1
     bitset<5>   Rt;//rs2
     bitset<5>   Wrt_reg_addr;//rd
+    bool        is_I_type;
     bool        rd_mem;// read data memory
     bool        wrt_mem; // write to dmem
     bool        alu_op;     //1 for addu, lw, sw, 0 for subu 
@@ -483,11 +483,6 @@ class FiveStageCore : public Core{
 					nextState.WB.Rt = state.MEM.Rt;
 					nextState.WB.Wrt_reg_addr = state.MEM.Wrt_reg_addr;
 					nextState.WB.wrt_enable = state.MEM.wrt_enable;
-				} else if (state.MEM.INS == "jal") {
-					nextState.WB.Wrt_data = state.MEM.Store_data;
-					cout<<"\tPassing Store data "<< state.MEM.ALUresult << endl;
-					nextState.WB.Wrt_reg_addr = state.MEM.Wrt_reg_addr;
-					nextState.WB.wrt_enable = state.MEM.wrt_enable;
 				}
 				
 			} else {
@@ -627,14 +622,6 @@ class FiveStageCore : public Core{
 					nextState.MEM.wrt_mem = state.EX.wrt_mem;
 					nextState.MEM.wrt_enable = state.EX.wrt_enable;
 					nextState.MEM.INS = state.EX.INS;
-				} else if (state.EX.INS == "jal") {
-					nextState.MEM.Store_data = state.EX.PC;
-					cout<<"\tjal passing by" << nextState.MEM.Store_data<< endl;
-					nextState.MEM.Wrt_reg_addr = state.EX.Wrt_reg_addr;
-					nextState.MEM.rd_mem = state.EX.rd_mem;
-					nextState.MEM.wrt_mem = state.EX.wrt_mem;
-					nextState.MEM.wrt_enable = state.EX.wrt_enable;
-					nextState.MEM.INS = state.EX.INS;
 				}
 			} else {
 				nextState.EX.Wrt_reg_addr = bitset<5> (0);
@@ -713,7 +700,7 @@ class FiveStageCore : public Core{
 						cout<<"\tWB rd: "<<nextState.WB.Wrt_reg_addr.to_ulong()<<endl;
 						cout<<"\tMEM rd: "<<nextState.MEM.Wrt_reg_addr.to_ulong()<<endl;
 					}
-				} else if (opcode == "1100011") {// BNE or BEQ
+				} else if (opcode == "1100011") {// BNE or BEQ <<<<<<<<TODO
 					nextState.EX.Rs = bitset<5> (Instruction.to_string().substr(12,5));
                     nextState.EX.Rt = bitset<5> (Instruction.to_string().substr(7,5));
 					string imm;
@@ -754,27 +741,30 @@ class FiveStageCore : public Core{
 						nextState.EX.wrt_mem = 0;
 						nextState.EX.rd_mem = 0;
 						nextState.EX.Read_data1 = myRF.readRF(nextState.EX.Rs);
+						cout<<"\tdata1 passed: "<<myRF.readRF(nextState.EX.Rs)<<endl;
 						nextState.EX.Read_data2 = myRF.readRF(nextState.EX.Rt);
+						cout<<"\tdata2 passed: "<<myRF.readRF(nextState.EX.Rt)<<endl;
 					} else {
 						cout<<"\tWB rd: "<<nextState.WB.Wrt_reg_addr.to_ulong()<<endl;
 						cout<<"\tMEM rd: "<<nextState.MEM.Wrt_reg_addr.to_ulong()<<endl;
 					}
-					//forwarding in ID MEM stage 
-					if(state.MEM.Wrt_reg_addr.to_ulong() == nextState.EX.Rs.to_ulong()) {
-						cout<<"\tGetting RS1 from MEM "<<state.MEM.ALUresult<<endl;
-						nextState.EX.Read_data1 = state.MEM.ALUresult;
+					//forwarding in ID stage
+					if (nextState.EX.rs1) {
+						state.EX.Read_data1 = myRF.readRF(nextState.EX.Rs);
+						cout<<"\treading R"<<state.EX.Rs.to_ulong()<<" as "<<state.EX.Read_data1<<endl;
+						stallRs1 = false;
 					}
-					if(state.MEM.Wrt_reg_addr.to_ulong() == nextState.EX.Rt.to_ulong()) {
-						cout<<"\tGetting RS1 from MEM "<<state.MEM.ALUresult<<endl;
-						nextState.EX.Read_data2 = state.MEM.ALUresult;
+					if (nextState.EX.rs2) {
+						state.EX.Read_data2 = myRF.readRF(nextState.EX.Rt);
+						cout<<"\treading R"<<state.EX.Rt.to_ulong()<<" as "<<state.EX.Read_data2<<endl;
+						stallRs2 = false;
 					}
-					cout<<"\tdata1 passed: "<<nextState.EX.Read_data1<<endl;
-					cout<<"\tdata2 passed: "<<nextState.EX.Read_data2<<endl;
 					cout<<"\tStall RS 1 "<<stallRs1<<endl;
 					cout<<"\tStall RS 2 "<<stallRs2<<endl;
-					cout<<"the operation is "<<nextState.EX.Read_data1.to_ulong()<<" comprared with "<< nextState.EX.Read_data2.to_ulong()<<endl;
 					if(!stallRs1 && !stallRs2) {
-						if (func3 == "000") {//BEQ
+						string func3 = Instruction.to_string().substr(17,3);
+						cout<<"\tThe func3 is " << func3 << endl;
+						if (func3 == "000") {//BEQ <<<<TODO
 							if (nextState.EX.Read_data1.to_ulong() == nextState.EX.Read_data2.to_ulong()) {
 								cout<<"\tCurrent PC "<<state.ID.PC.to_ulong()<<endl;
 								cout<<"\tCurrent Imm "<<to_long(nextState.EX.Imm)<<endl;
@@ -782,7 +772,7 @@ class FiveStageCore : public Core{
 								cout<<"\tBranching taken to "<<state.IF.PC.to_ulong()<<endl;
 								branch = true;
 							}else cout<<"\tNo Branching taken "<<endl;
-						} else if(func3 == "001"){//BNE
+						} else if(func3 == "001"){//BNE <<<<TODO
 							if (nextState.EX.Read_data1.to_ulong() != nextState.EX.Read_data2.to_ulong()) {
 								cout<<"\tCurrent PC "<<state.ID.PC.to_ulong()<<endl;
 								cout<<"\tCurrent Imm "<<to_long(nextState.EX.Imm)<<endl;
@@ -885,26 +875,9 @@ class FiveStageCore : public Core{
 							stallRs1 = true;
 						}
 					}
-				} else if (opcode == "1101111") {// JAL
-					nextState.EX.INS = "jal";
-					cout<<"\tThe instruction is jal R" << nextState.EX.Wrt_reg_addr.to_ulong()<<", #"<< nextState.EX.Imm<< endl;
-					nextState.EX.Wrt_reg_addr = bitset<5> (Instruction.to_string().substr(20,5)); 
-					string imm;
-					imm.append(Instruction.to_string().substr(0,1));
-					imm.append(Instruction.to_string().substr(12,8));
-					imm.append(Instruction.to_string().substr(11,1));
-					imm.append(Instruction.to_string().substr(1,10));
-					imm.append("0");
-					nextState.EX.Imm = extend(imm.substr(5,16)); 
-					cout<<"\tCurrent PC "<<state.ID.PC.to_ulong()<<endl;
-					cout<<"\tCurrent Imm "<<to_long(nextState.EX.Imm)<<endl;
-					state.IF.PC = bitset<32>(state.ID.PC.to_ulong() + to_long(nextState.EX.Imm));
-					cout<<"\tBranching taken to "<<state.IF.PC.to_ulong()<<endl;
-					branch = true;		
-					nextState.EX.wrt_enable = 1;
-					nextState.EX.wrt_mem = 0;
-					nextState.EX.rd_mem = 0;
-					nextState.EX.PC = state.ID.PC.to_ulong() + 4;
+				} else if (opcode == "1101111") {// JAL <<<<<<<<TODO
+						cout<<"\tfunction JAL..." << endl;
+						nextState.EX.INS = "jal"; 		
 				}
         	}
         	if (!stallRs1 && !stallRs2) nextState.EX.nop = state.ID.nop;
@@ -921,28 +894,22 @@ class FiveStageCore : public Core{
 			} else {// HALTING
 				if(branch) {
 					state.IF.nop = false; 
-					nextState.IF.PC = state.IF.PC.to_ulong();
 				} else {
 					state.IF.nop = true;
 					nextState.IF.PC = state.IF.PC.to_ulong();                
 					nextState.IF.nop = true;
 				}
-				              
+				cout<<"PC:\t"<<state.IF.PC.to_ulong()<<endl;                
 			} 
 			cout<<"\tnop --> " << (state.IF.nop? "true": "false") <<endl;
 			if(!stallRs1 && !stallRs2){
 				if (0 == state.IF.nop) { 
 					nextState.ID.Instr = Instruction;   
-					nextState.ID.PC = state.IF.PC; 
+					nextState.ID.PC = state.IF.PC;          
         		}
         		nextState.ID.nop = state.IF.nop;
-			} else {
-				nextState.IF.PC = state.IF.PC;
-				cout<<"\trepeating PC " << nextState.IF.PC.to_ulong()<< " because of Hazard"<<endl;
 			}
 			/* --------------------- End for stages --------------------- */
-			cout<<"PC:\t "<<state.IF.PC.to_ulong()<<endl;  
-			cout<<"next PC: "<<nextState.IF.PC.to_ulong()<<endl; 
 			if (state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop){
 				halted = true;
 				ext_dmem.outputDataMem();
@@ -975,6 +942,7 @@ class FiveStageCore : public Core{
 		        printstate<<"EX.Rs:\t"<<state.EX.Rs<<endl;
 		        printstate<<"EX.Rt:\t"<<state.EX.Rt<<endl;
 		        printstate<<"EX.Wrt_reg_addr:\t"<<state.EX.Wrt_reg_addr<<endl;
+		        printstate<<"EX.is_I_type:\t"<<state.EX.is_I_type<<endl; 
 		        printstate<<"EX.rd_mem:\t"<<state.EX.rd_mem<<endl;
 		        printstate<<"EX.wrt_mem:\t"<<state.EX.wrt_mem<<endl;        
 		        printstate<<"EX.alu_op:\t"<<state.EX.alu_op<<endl;
