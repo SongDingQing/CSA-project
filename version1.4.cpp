@@ -37,9 +37,9 @@ struct MEMStruct {
     bitset<5>   Rs;//rs1
     bitset<5>   Rt;//rs2   
     bitset<5>   Wrt_reg_addr;//rd
-    bool        rd_mem = 0;// read data memory
-    bool        wrt_mem = 0;  // write to dmem
-    bool        wrt_enable = 0; // write to reg   
+    bool        rd_mem = 0;
+    bool        wrt_mem = 0; 
+    bool        wrt_enable = 0;    
     bool        nop = true;
 	string  INS;    
 };
@@ -458,6 +458,7 @@ class FiveStageCore : public Core{
 			}
 			/* --------------------- MEM stage -------------------- */
 			cout<<"MEM stage:"<<"nop --> " << (state.MEM.nop? "true": "false") <<endl;
+			bool skip = false;
 			if (0 == state.MEM.nop) {
 				//cout<<state.MEM.INS<<endl;
 				if (state.MEM.INS == "lw") {
@@ -477,12 +478,13 @@ class FiveStageCore : public Core{
 					cout<<"\tSkipping WB"<< state.MEM.ALUresult << endl;
 					ext_dmem.writeDataMem(state.MEM.ALUresult,myRF.readRF(state.MEM.Rt));
 					cout<<"\tsaving "<<myRF.readRF(state.MEM.Rt) << " at "<< state.MEM.ALUresult<<endl;
+					skip = true;
 				}
 			} else {
 				nextState.MEM.Wrt_reg_addr = bitset<5> (0);
 				cout<<"\treseting rd"<<endl;
 			}
-			if (!state.MEM.wrt_enable) {
+			if (skip) {
 				nextState.WB.nop = true;
 			}else nextState.WB.nop = state.MEM.nop;
 			/* --------------------- EX stage --------------------- */
@@ -606,7 +608,7 @@ class FiveStageCore : public Core{
 							stallRs1 = true;
 						}
 					}
-				} else if (opcode == "0100011") {// SW
+				} else if (opcode == "0100011") {// SW <<<<<<<<TODO
 					nextState.EX.INS = "sw"; 
 					nextState.EX.Rs = bitset<5> (Instruction.to_string().substr(12,5));
                     nextState.EX.Rt = bitset<5> (Instruction.to_string().substr(7,5));
@@ -659,13 +661,12 @@ class FiveStageCore : public Core{
 				} else if (opcode == "0110011") {// ADD or SUB or XOR or OR or AND <<<<<<<<TODO
 					string func7 = Instruction.to_string().substr(0,7);
 					cout<<"\tThe func7 is " << func7 << endl;
-					nextState.EX.Rs = bitset<5> (Instruction.to_string().substr(12,5));
-                    nextState.EX.Rt = bitset<5> (Instruction.to_string().substr(7,5));
-                    nextState.EX.Wrt_reg_addr = bitset<5> (Instruction.to_string().substr(20,5)); 
 					if (func7 == "0000000") {
 						string func3 = Instruction.to_string().substr(17,3);
 						cout<<"\tThe func3 is " << func3 << endl;
-						
+						nextState.EX.Rs = bitset<5> (Instruction.to_string().substr(12,5));
+                        nextState.EX.Rt = bitset<5> (Instruction.to_string().substr(7,5));
+                        nextState.EX.Wrt_reg_addr = bitset<5> (Instruction.to_string().substr(20,5)); 
 						if (func3 == "000") {//ADD
 							nextState.EX.INS = "add";
 							cout<<"\tfunction is add R"<<nextState.EX.Wrt_reg_addr.to_ulong()<<", R"<< nextState.EX.Rs.to_ulong()<<", R"<< nextState.EX.Rt.to_ulong()<< endl;
@@ -679,43 +680,43 @@ class FiveStageCore : public Core{
 							nextState.EX.INS = "and"; 
 							cout<<"\tfunction is and R"<<nextState.EX.Wrt_reg_addr.to_ulong()<<", R"<< nextState.EX.Rs.to_ulong()<<", R"<< nextState.EX.Rt.to_ulong()<< endl;
 						}
-					} else if (func7 == "0100000") {//SUB
+						int r1 = nextState.EX.Rs.to_ulong();
+							if (r1!= 0) {// R0 is always 0
+								if(!nextState.MEM.nop && nextState.MEM.Wrt_reg_addr.to_ulong() == r1){
+									cout<<"\tHazard detected"<<endl;
+									cout<<"\trs1: "<<r1<<endl;
+									stallRs1 = true;
+								}
+								if(!nextState.WB.nop && nextState.WB.Wrt_reg_addr.to_ulong() == r1) {
+									nextState.EX.rs1 = true;
+								}
+							}
+							int r2 = nextState.EX.Rt.to_ulong();
+							if (r2!= 0) {// R0 is always 0
+								if(!nextState.MEM.nop && nextState.MEM.Wrt_reg_addr.to_ulong() == r2){
+									cout<<"\tHazard detected"<<endl;
+									cout<<"\trs2: "<<r2<<endl;
+									stallRs2 = true;
+								}
+								if(!nextState.WB.nop && nextState.WB.Wrt_reg_addr.to_ulong() == r2) {
+									nextState.EX.rs2 = true;
+								}
+							}
+							if(!stallRs1 && !stallRs2) {
+								nextState.EX.wrt_enable = 1;
+								nextState.EX.wrt_mem = 0;
+								nextState.EX.rd_mem = 0;
+								nextState.EX.Read_data1 = myRF.readRF(nextState.EX.Rs);
+								cout<<"\tdata1 passed: "<<myRF.readRF(nextState.EX.Rs)<<endl;
+								nextState.EX.Read_data2 = myRF.readRF(nextState.EX.Rt);
+								cout<<"\tdata2 passed: "<<myRF.readRF(nextState.EX.Rt)<<endl;
+							} else {
+								cout<<"\tWB rd: "<<nextState.WB.Wrt_reg_addr.to_ulong()<<endl;
+								cout<<"\tMEM rd: "<<nextState.MEM.Wrt_reg_addr.to_ulong()<<endl;
+							}
+					} else if (func7 == "0100000") {
+						cout<<"\tfunction SUB..." << endl;
 						nextState.EX.INS = "sub"; 
-						cout<<"\tfunction is sub R"<<nextState.EX.Wrt_reg_addr.to_ulong()<<", R"<< nextState.EX.Rs.to_ulong()<<", R"<< nextState.EX.Rt.to_ulong()<< endl;
-					}
-					int r1 = nextState.EX.Rs.to_ulong();
-					if (r1!= 0) {// R0 is always 0
-						if(!nextState.MEM.nop && nextState.MEM.Wrt_reg_addr.to_ulong() == r1){
-							cout<<"\tHazard detected"<<endl;
-							cout<<"\trs1: "<<r1<<endl;
-							stallRs1 = true;
-						}
-						if(!nextState.WB.nop && nextState.WB.Wrt_reg_addr.to_ulong() == r1) {
-							nextState.EX.rs1 = true;
-						}
-					}
-					int r2 = nextState.EX.Rt.to_ulong();
-					if (r2!= 0) {// R0 is always 0
-						if(!nextState.MEM.nop && nextState.MEM.Wrt_reg_addr.to_ulong() == r2){
-							cout<<"\tHazard detected"<<endl;
-							cout<<"\trs2: "<<r2<<endl;
-							stallRs2 = true;
-						}
-						if(!nextState.WB.nop && nextState.WB.Wrt_reg_addr.to_ulong() == r2) {
-							nextState.EX.rs2 = true;
-						}
-					}
-					if(!stallRs1 && !stallRs2) {
-						nextState.EX.wrt_enable = 1;
-						nextState.EX.wrt_mem = 0;
-						nextState.EX.rd_mem = 0;
-						nextState.EX.Read_data1 = myRF.readRF(nextState.EX.Rs);
-						cout<<"\tdata1 passed: "<<myRF.readRF(nextState.EX.Rs)<<endl;
-						nextState.EX.Read_data2 = myRF.readRF(nextState.EX.Rt);
-						cout<<"\tdata2 passed: "<<myRF.readRF(nextState.EX.Rt)<<endl;
-					} else {
-						cout<<"\tWB rd: "<<nextState.WB.Wrt_reg_addr.to_ulong()<<endl;
-						cout<<"\tMEM rd: "<<nextState.MEM.Wrt_reg_addr.to_ulong()<<endl;
 					}
 				} else if (opcode == "0010011") {// ADDI or XORI or ORI or ANDI <<<<<<<<TODO
 					string func3 = Instruction.to_string().substr(17,3);

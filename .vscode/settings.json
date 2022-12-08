@@ -1,8 +1,10 @@
 {
-    "files.associations": {
-        "bitset": "cpp",
-        "xstring": "cpp",
-        "iostream": "cpp",
-        "ostream": "cpp"
-    }
+  "files.associations": {
+    "bitset": "cpp",
+    "xstring": "cpp",
+    "iostream": "cpp",
+    "ostream": "cpp",
+    "string": "cpp",
+    "istream": "cpp"
+  }
 }
