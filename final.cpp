@@ -438,6 +438,7 @@ class FiveStageCore : public Core{
 		bitset<5> Rt;
 		bitset<5> Rd; 
     	bitset<16> Imm;
+		int counter = 0;
 
 		FiveStageCore(string ioDir, InsMem &imem, DataMem &dmem): Core(ioDir + "\\FS_", imem, dmem), opFilePath(ioDir + "\\StateResult_FS.txt") {}
 		
@@ -943,6 +944,12 @@ class FiveStageCore : public Core{
 			/* --------------------- End for stages --------------------- */
 			cout<<"PC:\t "<<state.IF.PC.to_ulong()<<endl;  
 			cout<<"next PC: "<<nextState.IF.PC.to_ulong()<<endl; 
+			if (state.IF.PC.to_ulong() != nextState.IF.PC.to_ulong()) {
+				counter++;
+			}
+			cout<<"Total execution cycle  "<<cycle + 1.0<<endl;
+			cout<<"average CPI "<<(cycle + 1.0)/counter<<endl;
+			cout<<"average IPC "<<counter/(cycle + 1.0)<<endl;
 			if (state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop){
 				halted = true;
 				ext_dmem.outputDataMem();
@@ -1032,10 +1039,12 @@ int main(int argc, char* argv[]) {
         cout<<"-----------------------------------------"<<endl;
         //cout << "SShalted?: "<< (SSCore.halted? "true":"false")<< endl;
         //cout << "FShalted?: "<< (FSCore.halted? "true":"false")<< endl;
-		SSCore.halted = true;//stub
 		if (!SSCore.halted) {
             cout<<"----Single Stage Core log"<<endl;
 			SSCore.step();
+			cout<<"Total execution cycle "<<SSCore.cycle<<endl;
+			cout<<"Average CPI 1"<<endl;
+			cout<<"Average IPC 1"<<endl;
         }
 		if (!FSCore.halted) {
 			cout<<"----Five Stage Core log"<<endl;
